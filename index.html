@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#eee7d7">
+  <title>人力車 · AR 明信片</title>
+  <link rel="stylesheet" href="./style.css?v=4">
+  <script src="./vendor/aframe.min.js"></script>
+  <script src="./vendor/mindar-image-aframe.prod.js"></script>
+  <script src="./model-fit.js"></script>
+  <script src="./pose-stability.js?v=3"></script>
+  <script src="./rickshaw-animation.js?v=1"></script>
+  <script src="./passenger-face.js?v=4"></script>
+  <script src="./gestures.js?v=3"></script>
+  <script defer src="./photo-booth.js?v=4"></script>
+  <script defer src="./app.js?v=4"></script>
+</head>
+<body data-view="home">
+  <main id="home">
+    <section class="postcard">
+      <div class="eyebrow">一張照片，一段城市記憶</div>
+      <h1>人力車</h1>
+      <p class="subtitle">AR 印章明信片</p>
+      <img class="photo" src="./assets/target_photo.png" alt="用來辨識的人力車歷史照片">
+      <p class="instructions">拍下你的臉，成為車上的乘客。<br>再掃描這張明信片，看人力車載著你前進。</p>
+      <button id="takePortrait" type="button" class="primary portraitPrimary">拍照成為乘客</button>
+      <p class="note">現場拍照 → 調整臉部 → 預覽乘客 → 掃描明信片</p>
+      <div id="portraitSummary" class="portraitSummary" hidden>
+        <canvas id="portraitThumb" width="64" height="80" aria-label="已套用的乘客臉部照片"></canvas>
+        <span>乘客已換上你的臉</span>
+        <button id="clearPortrait" type="button">清除照片</button>
+      </div>
+      <p class="note">雙指張合縮放，單指左右／上下拖曳調整方向與俯仰；也可選擇側面視角。</p>
+      <button id="start" type="button" class="secondary">直接掃描明信片</button>
+      <p id="loadNote" class="note" role="status">準備人力車與動畫中…</p>
+      <p id="homeError" class="error" role="alert" hidden></p>
+      <p class="note">請在光線充足的地方掃描，並避免照片反光。</p>
+    </section>
+  </main>
+
+  <section id="photoBooth" class="photoBooth" role="dialog" aria-modal="true" aria-labelledby="photoBoothTitle" data-stage="live" hidden>
+    <div class="boothCard">
+      <header class="boothHeader"><div><p class="eyebrow">坐進城市記憶</p><h2 id="photoBoothTitle">換上你的臉</h2></div><button id="closePhotoBooth" type="button" aria-label="關閉拍照視窗">關閉</button></header>
+      <p id="faceError" class="error" role="alert" hidden></p>
+      <div id="faceLiveStage">
+        <p id="faceCameraStatus" class="boothNote" role="status">正在開啟相機…</p>
+        <div class="faceFrame">
+          <video id="faceVideo" autoplay muted playsinline></video>
+          <svg class="faceGuide" viewBox="0 0 512 640" aria-hidden="true"><defs><mask id="liveFaceMask"><rect width="512" height="640" fill="white"/><ellipse cx="256" cy="320" rx="225.28" ry="294.4" fill="black"/></mask></defs><rect width="512" height="640" fill="#15110dcc" mask="url(#liveFaceMask)"/><ellipse cx="256" cy="320" rx="225.28" ry="294.4" fill="none" stroke="#fff1d4" stroke-width="4"/><path d="M112 245H400" stroke="#fff1d4" stroke-width="3" stroke-dasharray="10 9"/><text x="256" y="223" text-anchor="middle" fill="white" font-size="20">眼睛對齊虛線</text></svg>
+        </div>
+        <div class="boothActions"><button id="flipCamera" type="button" class="secondary" disabled>切換相機</button><button id="captureFace" type="button" class="primary" disabled>拍下我的臉</button></div>
+        <button id="chooseFacePhoto" type="button" class="fileAlternative">用手機相機／選照片</button>
+        <p class="note">正面、光線均勻，讓整張臉入鏡。照片只在這次網頁中使用。</p>
+      </div>
+      <div id="faceCropStage" hidden>
+        <p class="boothNote">拖曳移動照片，雙指縮放。眼睛對齊虛線，讓下巴落在框內。</p>
+        <div class="faceFrame cropFrame">
+          <canvas id="faceCrop" width="512" height="640" aria-label="可拖曳及縮放的臉部照片"></canvas>
+          <svg class="faceGuide" viewBox="0 0 512 640" aria-hidden="true"><defs><mask id="cropFaceMask"><rect width="512" height="640" fill="white"/><ellipse cx="256" cy="320" rx="225.28" ry="294.4" fill="black"/></mask></defs><rect width="512" height="640" fill="#15110dcc" mask="url(#cropFaceMask)"/><ellipse cx="256" cy="320" rx="225.28" ry="294.4" fill="none" stroke="#fff1d4" stroke-width="4"/><path d="M112 245H400" stroke="#fff1d4" stroke-width="3" stroke-dasharray="10 9"/></svg>
+        </div>
+        <div class="cropTools"><button id="faceZoomOut" type="button" aria-label="縮小臉部照片">−</button><output id="faceZoomValue">1.00×</output><button id="faceZoomIn" type="button" aria-label="放大臉部照片">＋</button><button id="faceCropFlip" type="button">鏡像</button><button id="faceCropReset" type="button">重設</button></div>
+        <div class="boothActions"><button id="retakeFace" type="button" class="secondary">重新拍照</button><button id="useFace" type="button" class="primary">貼到乘客上</button></div>
+        <button id="chooseFacePhotoCrop" type="button" class="fileAlternative">改用另一張照片</button>
+      </div>
+      <div id="facePreviewStage" hidden>
+        <div id="passengerPreview" class="passengerPreview" role="img" aria-label="已換臉的人力車乘客 3D 預覽"></div>
+        <p id="portraitPreviewNote" class="boothNote" role="status">正在準備乘客預覽…</p>
+        <div class="boothActions"><button id="editFaceAgain" type="button" class="secondary">調整臉部</button><button id="retakePreview" type="button" class="secondary">重拍</button></div>
+        <button id="portraitStartAR" type="button" class="primary">掃描明信片 · 看自己被載</button>
+        <p class="note">照片貼在立體頭部上；正面最清楚，大角度側臉為示意。重新整理網頁會清除照片。</p>
+      </div>
+      <input id="faceFile" type="file" accept="image/*" capture="user" hidden>
+    </div>
+  </section>
+
+  <div id="arRoot" aria-hidden="true">
+    <a-scene id="arScene" embedded
+      mindar-image="imageTargetSrc:./assets/targets.mind;autoStart:false;uiLoading:no;uiScanning:no;uiError:no;filterMinCF:0.001;filterBeta:20;warmupTolerance:8;missTolerance:8"
+      renderer="colorManagement:true;physicallyCorrectLights:true;alpha:true;antialias:true"
+      color-space="sRGB" xr-mode-ui="enabled:false"
+      device-orientation-permission-ui="enabled:false">
+      <a-camera position="0 0 0" look-controls="enabled:false" wasd-controls="enabled:false"></a-camera>
+      <a-entity light="type:ambient;color:#ffffff;intensity:1.25"></a-entity>
+      <a-entity light="type:directional;color:#fff5df;intensity:2.2" position="1 2 3"></a-entity>
+      <a-entity id="photoAnchor" mindar-image-target="targetIndex:0" pose-stability>
+        <a-entity id="cityRoot" position="0 0 .006" scale=".95 .95 .95" visible="false">
+          <a-entity id="viewTilt">
+            <a-entity rotation="90 0 0">
+              <a-entity id="cityYaw">
+                <a-entity id="cityModel" fit-to-postcard="width:1" rickshaw-animation="speed:1;enabled:false" passenger-face
+                  gltf-model="url(./assets/Rickshaw_Animated.glb)"></a-entity>
+              </a-entity>
+            </a-entity>
+          </a-entity>
+        </a-entity>
+      </a-entity>
+    </a-scene>
+  </div>
+
+  <section id="scanUI" aria-label="AR 掃描介面" hidden>
+    <div id="gestureSurface" aria-hidden="true"></div>
+    <div id="trackingStatus" class="status" role="status" aria-live="polite">請對準人力車照片</div>
+    <p id="gestureHint" hidden>雙指縮放 · 左右拖曳旋轉 · 上下拖曳俯仰</p>
+    <p id="lockHint" hidden>模型固定在畫面上；移動手機時不再對齊照片。</p>
+    <div id="scanGuide" aria-hidden="true"><span></span><p>將整張人力車照片放入鏡頭中</p></div>
+    <div class="bottomBar">
+      <button id="adjust" type="button" aria-controls="modelControls" aria-expanded="false">調整模型</button>
+      <button id="stop" type="button">結束掃描</button>
+    </div>
+    <div id="modelControls" class="controls" hidden>
+      <h2>調整人力車</h2>
+      <div class="viewActions"><button id="viewSide" type="button">側面</button><button id="viewTop" type="button">從上看</button><button id="lockPose" type="button" aria-pressed="false">固定觀看</button></div>
+      <label><input id="animationEnabled" type="checkbox" checked style="display:inline;width:auto;margin:0 8px 0 0">播放人力車與人物動畫</label>
+      <div class="settingRow"><span>動畫速度 <output id="animationSpeedValue">1.00×</output></span><div class="stepButtons"><button id="speedSlow" type="button">慢</button><button id="speedNormal" type="button">正常</button><button id="speedFast" type="button">快</button></div></div>
+      <div class="settingRow"><span>大小 <output id="sizeValue">0.95</output></span><div class="stepButtons"><button id="sizeDown" type="button" aria-label="縮小模型">−</button><button id="sizeUp" type="button" aria-label="放大模型">＋</button></div></div>
+      <div class="settingRow"><span>方向 <output id="yawValue">0°</output></span><div class="stepButtons"><button id="yawLeft" type="button" aria-label="向左旋轉模型">↶</button><button id="yawRight" type="button" aria-label="向右旋轉模型">↷</button></div></div>
+      <div class="settingRow"><span>俯仰角 <output id="pitchValue">0°</output></span><div class="stepButtons"><button id="pitchDown" type="button" aria-label="降低觀看角度">低角度</button><button id="pitchUp" type="button" aria-label="提高觀看角度">高角度</button></div></div>
+      <div class="settingRow"><span>離卡片高度 <output id="heightValue">0.006</output></span><div class="stepButtons"><button id="heightDown" type="button" aria-label="降低模型">−</button><button id="heightUp" type="button" aria-label="升高模型">＋</button></div></div>
+      <div class="controlActions"><button id="reset" type="button">恢復預設</button><button id="retryModel" type="button" hidden>重新載入模型</button></div>
+      <p>向上拖曳可降低視角。若追蹤仍晃，可按「固定觀看」讓模型留在畫面；按「恢復追蹤」重新對齊照片。</p>
+    </div>
+  </section>
+  <noscript>請啟用 JavaScript 後使用 AR 掃描。</noscript>
+</body>
+</html>
